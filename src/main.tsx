@@ -162,7 +162,7 @@ function App() {
     if (app.status !== "Running") {
       await runAction("start", app.id);
     }
-    window.open(app.url, "_blank", "noopener,noreferrer");
+    window.location.assign(app.url);
   }
 
   async function clearLogs() {
