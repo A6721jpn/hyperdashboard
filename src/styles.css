@@ -40,7 +40,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -238,7 +239,9 @@ h2 {
 .app-table-panel,
 .inspector,
 .log-drawer,
-.banner {
+.banner,
+.view-panel,
+.session-card {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
@@ -279,9 +282,66 @@ h2 {
   min-height: 0;
 }
 
+.session-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.session-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.session-card-head,
+.card-actions,
+.filter-bar,
+.settings-actions {
+  display: flex;
+  align-items: center;
+}
+
+.session-card-head {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.session-facts {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.session-facts div,
+.setting-row dl div {
+  min-width: 0;
+}
+
+.session-facts dt,
+.setting-row dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.session-facts dd,
+.setting-row dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.card-actions {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .app-table-panel,
 .inspector,
-.log-drawer {
+.log-drawer,
+.view-panel,
+.session-card {
   min-width: 0;
   overflow: hidden;
 }
@@ -463,6 +523,13 @@ div.table-row {
   color: var(--red);
 }
 
+.status.micro {
+  min-width: 0;
+  border-radius: 6px;
+  padding: 4px 7px;
+  font-size: 11px;
+}
+
 .controls {
   display: grid;
   grid-template-columns: repeat(4, 28px);
@@ -561,6 +628,135 @@ div.table-row {
   max-height: 220px;
 }
 
+.logs-view {
+  display: grid;
+  min-height: 620px;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.filter-bar {
+  gap: 8px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 16px;
+}
+
+.filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.chip {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: #344154;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.chip:hover,
+.chip.active {
+  border-color: #d1dcf8;
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.log-list {
+  display: grid;
+  align-content: start;
+  max-height: min(66vh, 760px);
+  overflow: auto;
+  background: #111827;
+  padding: 10px;
+}
+
+.log-line {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #dbeafe;
+  padding: 8px;
+  text-align: left;
+}
+
+.log-line:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.log-line code {
+  overflow-wrap: anywhere;
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.empty-copy {
+  color: var(--muted);
+  padding: 16px;
+}
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.settings-list select {
+  width: min(260px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--ink);
+  padding: 8px 10px;
+}
+
+.settings-actions {
+  gap: 8px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+  padding: 16px;
+}
+
+.settings-table {
+  display: grid;
+}
+
+.setting-row {
+  display: grid;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 16px;
+}
+
+.setting-row:last-child {
+  border-bottom: 0;
+}
+
+.setting-row > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.setting-row dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
 .spin {
   animation: spin 0.8s linear infinite;
 }
@@ -581,6 +777,11 @@ div.table-row {
   }
 
   .workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .session-grid,
+  .settings-layout {
     grid-template-columns: 1fr;
   }
 
@@ -615,5 +816,10 @@ div.table-row {
 
   .controls {
     grid-template-columns: repeat(4, 32px);
+  }
+
+  .log-line,
+  .setting-row dl {
+    grid-template-columns: 1fr;
   }
 }

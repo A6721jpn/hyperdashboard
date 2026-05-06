@@ -69,6 +69,8 @@ const runtime = new Map(
       health: "Not checked yet",
       managed: false,
       pid: null,
+      startedAt: null,
+      lastHealthCheckAt: null,
       stopping: false,
       logs: [`${stamp()} Registered ${definition.title}`],
     },
@@ -140,9 +142,11 @@ async function refreshState(definition) {
 
   const health = await checkHealth(definition);
   state.health = health.ok ? `Healthy: ${health.label}` : `Offline: ${health.label}`;
+  state.lastHealthCheckAt = new Date().toISOString();
 
   if (health.ok) {
     state.status = "Running";
+    state.startedAt ??= new Date().toISOString();
     return;
   }
 
@@ -179,6 +183,9 @@ async function snapshot() {
         iconClass: definition.iconClass,
         pid: state.pid,
         managed: state.managed,
+        startedAt: state.startedAt,
+        lastHealthCheckAt: state.lastHealthCheckAt,
+        stopPorts: definition.stopPorts,
         logs: state.logs,
       };
     }),
@@ -192,6 +199,7 @@ async function waitForHealthy(definition) {
     state.health = health.ok ? `Healthy: ${health.label}` : `Waiting: ${health.label}`;
     if (health.ok) {
       state.status = "Running";
+      state.startedAt ??= new Date().toISOString();
       log(definition.id, `Health check passed at ${definition.healthCheckUrl}`);
       return;
     }
@@ -212,6 +220,7 @@ async function startApp(definition) {
   if (health.ok) {
     state.status = "Running";
     state.health = `Healthy: ${health.label}`;
+    state.startedAt ??= new Date().toISOString();
     log(definition.id, "Already reachable; leaving existing process in place");
     return;
   }
@@ -225,6 +234,7 @@ async function startApp(definition) {
   state.status = "Starting";
   state.health = "Starting process";
   state.managed = true;
+  state.startedAt = new Date().toISOString();
   state.stopping = false;
   log(definition.id, `Starting '${definition.command}' in ${definition.workspacePath}`);
 
@@ -263,6 +273,7 @@ async function startApp(definition) {
     if (state.stopping) {
       state.status = "Stopped";
       state.health = "Stopped by dashboard";
+      state.startedAt = null;
       state.stopping = false;
       log(definition.id, `Stopped managed process (${signal ?? code ?? 0})`);
       return;
@@ -271,12 +282,14 @@ async function startApp(definition) {
     if (code === 0) {
       state.status = "Stopped";
       state.health = "Process exited normally";
+      state.startedAt = null;
       log(definition.id, "Process exited normally");
       return;
     }
 
     state.status = "Error";
     state.health = `Process exited with ${signal ?? `code ${code}`}`;
+    state.startedAt = null;
     log(definition.id, state.health, "error");
   });
 
@@ -335,6 +348,7 @@ async function stopApp(definition) {
       state.managed = false;
       state.status = "Stopped";
       state.health = "Stopped";
+      state.startedAt = null;
       log(definition.id, "Already stopped");
       return;
     }
@@ -347,6 +361,7 @@ async function stopApp(definition) {
     state.managed = false;
     state.status = afterStop.ok ? "Error" : "Stopped";
     state.health = afterStop.ok ? "Port is still responding after stop" : "Stopped by dashboard";
+    state.startedAt = afterStop.ok ? state.startedAt : null;
     log(definition.id, state.health, afterStop.ok ? "error" : "controller");
     return;
   }
@@ -374,6 +389,72 @@ function sendJson(response, status, payload) {
 async function handleApi(request, response, url) {
   if (request.method === "GET" && url.pathname === "/api/apps") {
     sendJson(response, 200, await snapshot());
+    return true;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/sessions") {
+    const data = await snapshot();
+    sendJson(response, 200, {
+      sessions: data.apps.map((app) => ({
+        appId: app.id,
+        title: app.title,
+        status: app.status,
+        statusClass: app.statusClass,
+        pid: app.pid,
+        source: app.managed ? "dashboard" : app.status === "Running" ? "external" : "none",
+        startedAt: app.startedAt,
+        health: app.health,
+        url: app.url,
+        command: app.command,
+        path: app.path,
+      })),
+    });
+    return true;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/logs") {
+    const data = await snapshot();
+    sendJson(response, 200, {
+      logs: data.apps.flatMap((app) =>
+        app.logs.map((line, index) => ({
+          id: `${app.id}-${index}`,
+          appId: app.id,
+          appTitle: app.title,
+          status: app.status,
+          line,
+        })),
+      ),
+    });
+    return true;
+  }
+
+  if (request.method === "DELETE" && url.pathname === "/api/logs") {
+    for (const [appId, state] of runtime.entries()) {
+      state.logs = [`${stamp()} controller: Logs cleared`];
+      log(appId, "All logs cleared");
+    }
+    sendJson(response, 200, await snapshot());
+    return true;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/settings") {
+    sendJson(response, 200, {
+      rootDir,
+      bindHost: "127.0.0.1",
+      controllerPort: Number(process.env.PORT || 5175),
+      maxLogLines,
+      apps: appDefinitions.map((definition) => ({
+        id: definition.id,
+        title: definition.title,
+        category: definition.category,
+        workspacePath: definition.workspacePath,
+        command: definition.command,
+        url: definition.url,
+        healthCheckUrl: definition.healthCheckUrl,
+        stopPorts: definition.stopPorts,
+        notes: definition.notes,
+      })),
+    });
     return true;
   }
 
